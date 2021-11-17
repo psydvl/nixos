@@ -9,48 +9,54 @@ Go to [config](https://github.com/psydvl/nixos/tree/config)
 
 ### There are git creation steps:
 ```bash
-mkdir ~/work/Projects/nixos.git/
-pushd ~/work/Projects/nixos.git/
+# /work symlinked to $HOME/work
+mkdir -p /work/Projects/nixos.git/
+pushd /work/Projects/nixos.git/
 
 git init --bare
-git config --local alias.st "!git --work-tree=/ status -uno"
-git config --local alias.ci "!git --work-tree=/ commit"
+git config --local alias.dt "!git --work-tree=./"
+git config --local alias.ct "!git --work-tree=/etc/nixos"
+git config --local alias.st "!git ct status -uno"
+git config --local alias.ci "!git ct commit"
 
-git --work-tree=./ checkout -b docs
-git --work-tree=./ add README.md
-git --work-tree=./ commit -m "Add little documentation set"
+git ct checkout -b docs
+git ct add README.md
+git ct commit -m "Add little documentation set"
 
-git --work-tree=/ checkout --orphan config
-git --work-tree=/ rm --cached -r .
-git --work-tree=/ add /etc/nixos/configuration.nix
-git --work-tree=/ add /etc/nixos/packages.nix
-git --work-tree=/ add /etc/nixos/fileSystems-home.nix
-git --work-tree=/ add /etc/nixos/networking-wireless-networks.nix
-git --work-tree=/ commit -m "Init first bare git commit for configs"
+git dt checkout --orphan config
+git dt rm --cached -r .
+git dt add configuration.nix
+git dt add packages.nix fileSystems-home.nix networking-wireless-networks.nix
+git ci -m "Init first bare git commit for configs"
 
 git remote add https://github.com/psydvl/nixos.git
-git pushd
+git push
 
 popd
 ```
 
 
 ### WARNING: I'm still understanding git bare mechanics... 
-#### There are git clone command steps:
+#### There are after-install ~~git clone command~~ steps:
 ```bash
-mkdir -p $HOME/work/Projects
+mkdir -p $HOME/work
+sudo ln -s $HOME/work /work
+mv $HOME/Projects $HOME/work
+ln -s $HOME/Projects $HOME/work/Projects
 
-git clone --mirror https://github.com/psydvl/nixos.git $HOME/work/Projects/nixos.git/
-pushd $HOME/work/Projects/nixos.git/
+git clone --mirror https://github.com/psydvl/nixos.git /work/Projects/nixos.git/
+pushd /work/Projects/nixos.git/
 
-git config --local alias.st "!git --work-tree=/ status -uno"
-git config --local alias.ci "!git --work-tree=/ commit"
+git config --local alias.dt "!git --work-tree=./"
+git config --local alias.ct "!git --work-tree=/etc/nixos"
+git config --local alias.st "!git ct status -uno"
+git config --local alias.ci "!git ct commit"
 
-git --work-tree=./ checkout docs
-git --work-tree=./ fetch
+git dt checkout docs -f
+#git dt fetch
 
-sudo git --work-tree=/ checkout config
-sudo git --work-tree=/ fetch 
+sudo git ct checkout config -f
+#sudo git ct fetch 
 
 popd
 ```

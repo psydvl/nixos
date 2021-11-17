@@ -5,10 +5,7 @@
 { config, pkgs, ... }:
 
 let
-	stored = {
-		networking.wireless.networks = import ./networking-wireless-networks.nix;
-		fileSystems."/home" = import ./fileSystems-home.nix;
-	};
+	# sudo nix-channel --add https://nixos.org/channels/nixos-21.05 nixos
 	# sudo nix-channel --add https://nixos.org/channels/nixos-unstable nixos-unstable
 	# sudo nix-channel --update
 	unstable = import <nixos-unstable> {
@@ -16,7 +13,21 @@ let
 			allowUnfree = true;
 		};
 	};
+	stored = {
+		networking.wireless.networks = import ./networking-wireless-networks.nix;
+		fileSystems."/home" = import ./fileSystems-home.nix;
+	};
+	packages = import ./packages.nix { inherit pkgs unstable; };
 in {
+	nix = {
+		autoOptimiseStore = true;
+		gc = {
+			automatic = true;
+			dates = "weekly";
+			options = "--delete-older-than 30d";
+		};
+	};
+
 	imports =
 		[ # Include the results of the hardware scan.
 			./hardware-configuration.nix
@@ -24,31 +35,37 @@ in {
 	fileSystems."/home" = stored.fileSystems."/home";
 
 	# Use the systemd-boot EFI boot loader.
-	boot.loader.systemd-boot.enable = true;
-	boot.loader.efi.canTouchEfiVariables = true;
+	boot = {
+		loader = {
+			systemd-boot.enable = true;
+			efi.canTouchEfiVariables = true;
+		};
+		kernelPackages = pkgs.linuxPackages_zen;
+		supportedFilesystems = [ "ntfs" ];
+	};
 	
-	boot.kernelPackages = pkgs.linuxPackages_zen;
 	
-	boot.supportedFilesystems = [ "ntfs" ];
-
-	networking.hostName = "nixos";
-	# networking.wireless.enable = true;	# Enables wireless support via wpa_supplicant. -- conflicts with networking.networkmanager by GNOME 
-
 	# Set your time zone.
 	time.timeZone = "Europe/Moscow";
 
-	# The global useDHCP flag is deprecated, therefore explicitly set to false here.
-	# Per-interface useDHCP will be mandatory in the future, so this generated config
-	# replicates the default behaviour.
-	networking.useDHCP = false;
-	networking.interfaces.enp0s20f0u1u2.useDHCP = true;
-	networking.interfaces.wlp1s0.useDHCP = true;
-	
-	networking.wireless.networks = stored.networking.wireless.networks;
+	networking = {
+		hostName = "nixos";
+		# networking.wireless.enable = true;	# Enables wireless support via wpa_supplicant. -- conflicts with networking.networkmanager by GNOME 
 
-	# Configure network proxy if necessary
-	# networking.proxy.default = "http://user:password@proxy:port/";
-	# networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
+
+		# The global useDHCP flag is deprecated, therefore explicitly set to false here.
+		# Per-interface useDHCP will be mandatory in the future, so this generated config
+		# replicates the default behaviour.
+		useDHCP = false;
+		interfaces.wlp1s0.useDHCP = true;
+	
+		wireless.networks = stored.networking.wireless.networks;
+
+		# Configure network proxy if necessary
+		# networking.proxy.default = "http://user:password@proxy:port/";
+		# networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
+	};
+
 
 	# Select internationalisation properties.
 	i18n = {
@@ -63,27 +80,37 @@ in {
 		keyMap = "us";
 	};
 
-	# Enable the X11 windowing system.
-	services.xserver.enable = true;
+	services = {
+		# Enable the X11 windowing system.
+		xserver.enable = true;
 
 
-	# Enable the GNOME Desktop Environment.
-	# With Wayland	
-	services.xserver.displayManager.gdm.wayland = true;
-	services.xserver.displayManager.gdm.enable = true;
-	services.xserver.desktopManager.gnome.enable = true;
+		# Enable the GNOME Desktop Environment.
+		# With Wayland	
+		xserver.displayManager.gdm = {
+			enable = true;
+			wayland = true;
+		};
+		xserver.desktopManager.gnome.enable = true;
 
-	# Enable the KDE Desktop Environment.
-	# services.xserver.displayManager.sddm.enable = true;
-	# services.xserver.desktopManager.plasma5.enable = true;
+		# Enable the KDE Desktop Environment.
+		# services.xserver.displayManager.sddm.enable = true;
+		# services.xserver.desktopManager.plasma5.enable = true;
 	
 
-	# Configure keymap in X11
-	# services.xserver.layout = "us";
-	# services.xserver.xkbOptions = "eurosign:e";
+		# Configure keymap in X11
+		# services.xserver.layout = "us";
+		# services.xserver.xkbOptions = "eurosign:e";
 
-	# Enable CUPS to print documents.
-	# services.printing.enable = true;
+		# Enable CUPS to print documents.
+		printing = {
+			enable = true;
+			drivers = [
+				pkgs.gutenprint
+				pkgs.gutenprintBin
+			];
+		};
+	};
 
 	# Remove sound.enable or turn it off if you had it set previously, it seems to cause conflicts with pipewire
 	# sound.enable = false;
@@ -133,7 +160,7 @@ in {
 
 	# Enable touchpad support (enabled default in most desktopManager).
 	# services.xserver.libinput.enable = true;
-
+	
 	# Define a user account. Don't forget to set a password with ‘passwd’.
 	users.users.nixi = {
 		isNormalUser = true;
@@ -141,57 +168,20 @@ in {
 		extraGroups = [
 			"wheel" # Enable ‘sudo’ for the user.
 			"networkmanager"
+			"adbusers"
 			];
 	};
 	users.extraUsers.root.shell = pkgs.zsh;
 
 	# Allow to install non-free packages
-	nixpkgs.config.allowUnfree = true;	
+	nixpkgs.config.allowUnfree = true;
 	
 	# List packages installed in system profile. To search, run:
 	# $ nix search wget
 	environment.systemPackages = with pkgs; [
-		wget
-		gitFull
-		htop
-		vim
-		glow
-		
-		zsh
-		oh-my-zsh
-		zsh-powerlevel10k
-		zsh-nix-shell
-		
-		nix-tree
-		
-		go
-		conda
-		
-		sl
-		ffmpeg-full
-		youtube-dl
-		gallery-dl
-		
-		# GUI
-		gnome.gnome-tweaks
-		gnomeExtensions.caffeine
-		gnomeExtensions.maxi
-		desktop-file-utils
-		
-		firefox-wayland
-		zathura
-		tdesktop
-		unstable.keeweb
-		
-		guake
-		pantheon.elementary-code
-		vscode
-		glade
-		chromium
-		
-		steam
-		gnome.gnome-disk-utility
-	];
+	] ++ packages.environment.systemPackages;
+	fonts.fonts = with pkgs; [
+	] ++ packages.fonts.fonts;
 
 	# Some programs need SUID wrappers, can be configured further or are
 	# started in user sessions.
@@ -200,25 +190,20 @@ in {
 	#	 enable = true;
 	#	 enableSSHSupport = true;
 	# };
-	programs.xwayland.enable = true;
-	programs.zsh = {
-		enable = true;
-		promptInit = "source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme";
-		interactiveShellInit = "source ${pkgs.zsh-nix-shell}/share/zsh-nix-shell/nix-shell.plugin.zsh"; # zsh-nix-shell
+	programs = {
+		xwayland.enable = true;
+		zsh = {
+			enable = true;
+			promptInit = "source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme";
+			interactiveShellInit = "source ${pkgs.zsh-nix-shell}/share/zsh-nix-shell/nix-shell.plugin.zsh"; # zsh-nix-shell
+			ohMyZsh = {
+				enable = true;
+			};
+		};
+		vim.defaultEditor = true;
+		adb.enable = true;
+		steam.enable = true;
 	};
-	programs.sway = {
-		enable = true;
-		wrapperFeatures.gtk = true; # so that gtk works properly
-		extraPackages = with pkgs; [
-			swaylock
-			swayidle
-			wl-clipboard
-			mako # notification daemon
-			alacritty # Alacritty is the default terminal in the config
-			dmenu # Dmenu is the default in the config but i recommend wofi since its wayland native
-  		];
-	};
-	programs.steam.enable = true;
 
 	# List services that you want to enable:
 
@@ -238,6 +223,5 @@ in {
 	# Before changing this value read the documentation for this option
 	# (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
 	system.stateVersion = "21.05"; # Did you read the comment?
-
 }
 

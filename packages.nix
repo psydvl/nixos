@@ -1,100 +1,195 @@
-{ pkgs, unstable }:
-with pkgs; { 
-	environment.systemPackages = [
+{ pkgs }:
+with pkgs; {
+	nix = nixFlakes;
+	linux = linuxPackages_zen;
+	printing.drivers = [
+		gutenprint
+		gutenprintBin
+	];
+	unstablePackages = with unstable; [
+
+		fq
+
+		#$ GUI
+		gnomeExtensions.ddterm
+		gnomeExtensions.emoji-selector
+
+		obsidian
+		keepassxc
+		keeweb
+		latest.firefox-nightly-bin
+
+		ventoy-bin
+		github-desktop
+		android-studio
+
+		zoom-us
+		waydroid
+
+		the-powder-toy
+	];
+	latexPackages = [
+		(texlive.combine { # FIX: rework for smaller collection
+			inherit (texlive)
+			scheme-basic #⊇ collection-basic collection-latex
+			scheme-tetex #⊇ collection-latexrecommended collection-fontsrecommended collection-langcyrillic
+				#collection-langcyrillic #⊇ cyrillic russ
+			latexmk #⊆ collection-binextra
+			collection-latexextra
+			;
+		})
+		latexrun
+		gnome-latex
+		setzer
+	];
+	environment.systemPackages = latexPackages ++ unstablePackages ++ [
+		#%
 		wayland
-	
-		# CLI
-		
+		libsecret
+
+		#$ CLI
+
+		#% simple cli
+		bat
+		binutils
 		imagemagick
 		file
+		gdu
 		gitFull
-		fossil
-		glow # markdown in CLI
+		glow #: markdown in CLI
 		graphviz
 		htop
 		ncdu
 		wget
-		
+
+		#% jq similar
+		jq # JSON
+		yq # YAML, xq (inside) for XML, tomlq (inside) for TOML https://github.com/kislyuk/yq
+		rq # https://github.com/dflemstr/rq
+		rush # rh WIP https://github.com/Xion/rush
+		#fq # in unstable for now
+		#htmlq,pup not very comfortable for me
+
+		#% vim stuff
 		vim_configurable
 		vimPlugins.vim-airline
 		vimPlugins.vim-airline-themes
-		
+
+		#% zsh stuff
 		zsh
 		oh-my-zsh
 		zsh-powerlevel10k
 		meslo-lgs-nf # Meslo Nerd Font patched for Powerlevel10k
 		zsh-nix-shell
-		
-		gh
-		
+
+		#% SDK, language package and environment
 		go
 		gtk4
+		gtk3.dev
 		gtk4.dev
 		conda
+		python3
 		kotlin
 		jdk
 		sqlite
-		
+		tcl tk
+
+		#% Nix(OS) stuff
 		nix-tree
 		nix-index
+		nix-info
 		nix-du
 		nox
+		nix-prefetch
+		nix-direnv-flakes
+
+		#% compatibility
 		appimage-run
-		libsecret
+		direnv
 		wl-clipboard
-		
+		desktop-file-utils
+		patchelf
+
+		#%
+		ookla-speedtest
+		gh
 		sl
+		tealdeer
+
+		#%
 		ffmpeg-full
 		youtube-dl
 		gallery-dl
-		
-		# GUI
-		
+
+		#$ GUI
+
+		adwaita-qt
 		gnome.gnome-tweaks
 		chrome-gnome-shell
-		gnomeExtensions.caffeine
-		gnomeExtensions.adwaita-theme-switcher
-		gnomeExtensions.dash-to-dock
-		gnomeExtensions.ddterm
-		gnomeExtensions.maxi
-		gnomeExtensions.snowy
-		unstable.gnomeExtensions.appindicator
-		desktop-file-utils
+		gnome.gnome-characters
+		gnome.gucharmap
+		emote
+	] ++ (with gnomeExtensions; [
+		appindicator
+		bluetooth-quick-connect
+		caffeine
+		#ddterm
+		#emoji-selector
+		night-theme-switcher
+		snowy
+	]) ++ [
 		gnome.dconf-editor
-		gnome.gnome-disk-utility
 		
+
+		#% main
 		firefox-wayland
-		zathura
 		tdesktop
 		kotatogram-desktop
-		
+
+		#% office
+		abiword
+		gnumeric
+		libreoffice
+
+		#%
 		cawbird # Twitter
-		keybase
-		kodi-wayland
-		marker
+		gnome.gnome-disk-utility
+		gparted
+		gnome-passwordsafe
+
+		#% drawing
 		drawing
-		
-		unstable.keeweb
-		unstable.obsidian
-		unstable.zoom-us
-		
-		unstable.android-studio
-		unstable.github-desktop
+		gimp
+		inkscape
+
+		#% IDE
 		vscode-fhs
-		gitg
-		sqlitebrowser
-		dbeaver
-		
+		jetbrains.idea-community
 		pantheon.elementary-code
 		gnome-builder
 		geany-with-vte
+		thonny
+
+		#% various file stuff
+		zathura
+		marker
+		meld
 		glade
-		patchelf
-		nix-prefetch-git
-		unstable.inkscape
+		sqlitebrowser
+		dbeaver
+
+		#%
+		cherrytree
+		gitg
+
+		#%
 		chromium
 		tangram
-		
+		keybase
+
+		#%
+		transmission-gtk
+		bottles
 		steam
 	];
 	fonts.fonts = [

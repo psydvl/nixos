@@ -2,7 +2,6 @@
 
 ## [@psydvl](https://github.com/psydvl) NixOS Configuration
 
-Git'ed after about a week of use  
 Still need improvements
 
 Go to [config](https://github.com/psydvl/nixos/tree/config)
@@ -19,10 +18,9 @@ pushd /work/Projects/nixos.git/config/
 
 git init --bare
 git remote add $REMOTE
-git config --local --bool core.bare false
-git config --local --path core.worktree /etc/nixos
-git config --local alias.st "status -uno"
-git config --local alias.ci "commit"
+git config --local alias.ct "!git --work-tree=/etc/nixos"
+git config --local alias.st "!git ct status -uno"
+git config --local alias.ci "!git ct commit"
 
 git ct add flake.nix # if you using nix flakes as I am
 git ct add configuration.nix
@@ -77,13 +75,12 @@ git config --local alias.st "status"
 popd
 pushd /work/Projects/nixos.git/config
 
-git config --local --bool core.bare false
-git config --local --path core.worktree /etc/nixos
-git config --local alias.st "status -uno"
-git config --local alias.ci "commit"
+git config --local alias.ct "!git --work-tree=/etc/nixos"
+git config --local alias.st "!git ct status -uno"
+git config --local alias.ci "!git ct commit"
 
-# Only once when sudo used: furter work possible without sudo as readonly mode enough to it
-sudo git ct checkout config -f
+# Only once when sudo used: furter work possible without sudo too as readonly mode enough to it
+sudo git ct checkout -f
 
 popd
 ```

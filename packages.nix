@@ -1,33 +1,19 @@
 { pkgs }:
-with pkgs; {
+with pkgs; rec {
 	nix = nixFlakes;
 	linux = linuxPackages_zen;
 	printing.drivers = [
 		gutenprint
 		gutenprintBin
 	];
-	unstablePackages = with unstable; [
-
-		fq
-
-		#$ GUI
-		gnomeExtensions.ddterm
-		gnomeExtensions.emoji-selector
-
-		obsidian
-		keepassxc
-		keeweb
-		latest.firefox-nightly-bin
-
-		ventoy-bin
-		github-desktop
-		android-studio
-
-		zoom-us
-		waydroid
-
-		the-powder-toy
+	pkgs.vaapiIntel = vaapiIntel.override { enableHybridCodec = true; };
+	hardware.opengl.extraPackages = [
+		intel-media-driver # LIBVA_DRIVER_NAME=iHD
+		vaapiIntel # LIBVA_DRIVER_NAME=i965 (older but works better for Firefox/Chromium)
+		vaapiVdpau
+		libvdpau-va-gl
 	];
+
 	latexPackages = [
 		(texlive.combine { # FIX: rework for smaller collection
 			inherit (texlive)
@@ -42,10 +28,12 @@ with pkgs; {
 		gnome-latex
 		setzer
 	];
-	environment.systemPackages = latexPackages ++ unstablePackages ++ [
+	environment.systemPackages = latexPackages ++ [
 		#%
 		wayland
 		libsecret
+		alsa-utils
+		vulkan-loader
 
 		#$ CLI
 
@@ -60,10 +48,13 @@ with pkgs; {
 		graphviz
 		htop
 		ncdu
+		potrace
+		unzip
 		wget
 
 		#% jq similar
 		jq # JSON
+		fq # binary
 		yq # YAML, xq (inside) for XML, tomlq (inside) for TOML https://github.com/kislyuk/yq
 		rq # https://github.com/dflemstr/rq
 		rush # rh WIP https://github.com/Xion/rush
@@ -109,6 +100,7 @@ with pkgs; {
 		wl-clipboard
 		desktop-file-utils
 		patchelf
+		virt-manager
 
 		#%
 		ookla-speedtest
@@ -133,18 +125,20 @@ with pkgs; {
 		appindicator
 		bluetooth-quick-connect
 		caffeine
-		#ddterm
-		#emoji-selector
+		ddterm
+		dash-to-dock
+		#dash-to-panel
+		emoji-selector
 		night-theme-switcher
 		snowy
 	]) ++ [
 		gnome.dconf-editor
-		
+
+		helvum #: pipewire patchbay
 
 		#% main
 		firefox-wayland
 		tdesktop
-		kotatogram-desktop
 
 		#% office
 		abiword
@@ -152,6 +146,7 @@ with pkgs; {
 		libreoffice
 
 		#%
+		tor-browser-bundle-bin
 		cawbird # Twitter
 		gnome.gnome-disk-utility
 		gparted
@@ -164,11 +159,16 @@ with pkgs; {
 
 		#% IDE
 		vscode-fhs
-		jetbrains.idea-community
+		#jetbrains.idea-community
 		pantheon.elementary-code
 		gnome-builder
 		geany-with-vte
 		thonny
+		#android-studio
+
+		#% git
+		github-desktop
+		gitg
 
 		#% various file stuff
 		zathura
@@ -177,20 +177,29 @@ with pkgs; {
 		glade
 		sqlitebrowser
 		dbeaver
+		transmission-gtk
 
 		#%
+		obsidian
 		cherrytree
-		gitg
+		keepassxc
+		#keeweb
+		ventoy-bin
+		vlc
 
 		#%
 		chromium
 		tangram
 		keybase
+		zoom-us
+		waydroid
 
 		#%
-		transmission-gtk
-		bottles
 		steam
+		the-powder-toy
+
+		#% overlayed
+		bottles
 	];
 	fonts.fonts = [
 		meslo-lgs-nf # Meslo Nerd Font patched for Powerlevel10k

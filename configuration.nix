@@ -1,8 +1,7 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, options, ... }:
 let
 	stored = {
 		networking.wireless.networks = import ./networking-wireless-networks.nix;
-		fileSystems."/home" = import ./fileSystems-home.nix;
 	};
 	packages = import ./packages.nix {
 		inherit pkgs;
@@ -22,7 +21,8 @@ let
 	};
 in {
 	nix = {
-		autoOptimiseStore = true;
+		#autoOptimiseStore = true;
+		settings.auto-optimise-store = true;
 		gc = {
 			automatic = true;
 			dates = "weekly";
@@ -38,9 +38,18 @@ in {
 
 	imports = [
 		./hardware-configuration.nix # Include the results of the hardware scan.
+		./extra-hardware-configuration.nix
 	];
 
-	fileSystems."/home" = stored.fileSystems."/home";
+	fileSystems."/home" = {
+		device = "/dev/disk/by-label/home";
+		fsType = "ext4";
+	};
+
+	hardware.opengl = {
+		enable = true;
+		extraPackages = with pkgs; [] ++ packages.hardware.opengl.extraPackages;
+	};
 
 	# Use the systemd-boot EFI boot loader.
 	boot = {
@@ -59,28 +68,25 @@ in {
 		kernelPackages = packages.linux;
 		supportedFilesystems = [ "ntfs" ];
 	};
-	
-	
+
 	# Set your time zone.
 	time.timeZone = "Europe/Moscow";
 
 	networking = {
 		hostName = "nixos";
-		# networking.wireless.enable = true;	# Enables wireless support via wpa_supplicant. -- conflicts with networking.networkmanager by GNOME
+		#wireless.enable = true;	# Enables wireless support via wpa_supplicant. -- conflicts with networking.networkmanager by GNOME
 
 		# The global useDHCP flag is deprecated, therefore explicitly set to false here.
 		# Per-interface useDHCP will be mandatory in the future, so this generated config
 		# replicates the default behaviour.
 		useDHCP = false;
-		interfaces.wlp1s0.useDHCP = true;
+		#interfaces.wlp1s0.useDHCP = true;
+		#interfaces.enp0s20f0u2.useDHCP = true;
 
 		wireless.networks = stored.networking.wireless.networks;
 
-		# Configure network proxy if necessary
-		# networking.proxy.default = "http://user:password@proxy:port/";
-		# networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
+		timeServers = options.networking.timeServers.default ++ [ "time.cloudflare.com" ]; 
 	};
-
 
 	# Select internationalisation properties.
 	i18n = {
@@ -95,10 +101,16 @@ in {
 		keyMap = "us";
 	};
 
+	systemd.services.NetworkManager-wait-online.enable = false;
+
 	services = {
+		ananicy.enable = true;
+		fwupd.enable = true;
+		flatpak.enable = true;
+		accounts-daemon.enable = true;
+
 		# Enable the X11 windowing system.
 		xserver.enable = true;
-
 
 		# Enable the GNOME Desktop Environment.
 		# With Wayland
@@ -124,6 +136,7 @@ in {
 	};
 
 	virtualisation = {
+		libvirtd.enable = true;
 		podman = {
 			enable = true;
 
@@ -181,17 +194,6 @@ in {
 	# Enable touchpad support (enabled default in most desktopManager).
 	# services.xserver.libinput.enable = true;
 
-	# Define a user account. Don't forget to set a password with ‘passwd’.
-	users.users.nixi = {
-		isNormalUser = true;
-		shell = pkgs.zsh;
-		extraGroups = [
-			"wheel" # Enable ‘sudo’ for the user.
-			"networkmanager"
-			"adbusers"
-		];
-	};
-	users.extraUsers.root.shell = pkgs.zsh;
 
 	environment.systemPackages = with pkgs; [
 	] ++ packages.environment.systemPackages;
@@ -201,6 +203,10 @@ in {
 	fonts.fonts = with pkgs; [] ++ packages.fonts.fonts;
 
 	programs = {
+		adb.enable = true;
+		dconf.enable = true;
+		steam.enable = true;
+		vim.defaultEditor = true;
 		xwayland.enable = true;
 		zsh = {
 			enable = true;
@@ -213,10 +219,20 @@ in {
 				store = "ls /nix/store | grep";
 			};
 		};
-		vim.defaultEditor = true;
-		adb.enable = true;
-		steam.enable = true;
 	};
+
+	# Define a user account. Don't forget to set a password with ‘passwd’.
+	users.users.nixi = {
+		isNormalUser = true;
+		shell = pkgs.zsh;
+		extraGroups = [
+			"wheel" # Enable ‘sudo’ for the user.
+			"networkmanager"
+			"adbusers"
+			"libvirtd"
+		];
+	};
+	users.extraUsers.root.shell = pkgs.zsh;
 
 	# This value determines the NixOS release from which the default
 	# settings for stateful data, like file locations and database versions

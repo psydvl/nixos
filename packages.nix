@@ -74,7 +74,10 @@ with pkgs; rec {
 		zsh-nix-shell
 
 		#% SDK, language package and environment
+		gdb
+		gcc
 		go
+		golangci-lint
 		gtk4
 		gtk3.dev
 		gtk4.dev
@@ -84,6 +87,11 @@ with pkgs; rec {
 		jdk
 		sqlite
 		tcl tk
+	] ++ (with python3.pkgs; [
+		bandit
+		flake8
+		pylint
+	]) ++ [
 
 		#% Nix(OS) stuff
 		nix-tree
@@ -101,8 +109,11 @@ with pkgs; rec {
 		desktop-file-utils
 		patchelf
 		virt-manager
+		podman
+		pulseaudio
 
 		#%
+		onefetch
 		ookla-speedtest
 		gh
 		sl
@@ -134,23 +145,27 @@ with pkgs; rec {
 	]) ++ [
 		gnome.dconf-editor
 
+		sysprof
+
+		#% pipewire investigation
+		pavucontrol
+		plasma-pa
+		qjackctl
+		carla
+		cadence #catia
+		patchage
 		helvum #: pipewire patchbay
 
 		#% main
 		firefox-wayland
 		tdesktop
+		cherrytree
+		sublime4
 
 		#% office
 		abiword
 		gnumeric
 		libreoffice
-
-		#%
-		tor-browser-bundle-bin
-		cawbird # Twitter
-		gnome.gnome-disk-utility
-		gparted
-		gnome-passwordsafe
 
 		#% drawing
 		drawing
@@ -158,15 +173,16 @@ with pkgs; rec {
 		inkscape
 
 		#% IDE
+		pantheon.elementary-code
 		vscode-fhs
 		#jetbrains.idea-community
-		pantheon.elementary-code
 		gnome-builder
 		geany-with-vte
 		thonny
 		#android-studio
 
 		#% git
+		sublime-merge
 		github-desktop
 		gitg
 
@@ -179,29 +195,61 @@ with pkgs; rec {
 		dbeaver
 		transmission-gtk
 
-		#%
-		obsidian
-		cherrytree
-		keepassxc
-		#keeweb
-		ventoy-bin
+		#% media
 		vlc
+		mpv
+		celluloid
 
-		#%
-		chromium
-		tangram
-		keybase
+		#% notes
+		obsidian
+		zim
+		keepassxc
+		keeweb
+		gnome-passwordsafe
+
+		#% communication
+		cawbird # Twitter
+		#kotatogram-desktop
+		discord-ptb
 		zoom-us
-		waydroid
+		streamlink
+		chatterino2
+		vk-messenger
+		tor-browser-bundle-bin
 
-		#%
+		#% disks stuff
+		gnome.gnome-disk-utility
+		gparted
+
+		#% relax
 		steam
+		minetest
+		gnome.gnome-mahjongg
 		the-powder-toy
 
 		#% overlayed
-		bottles
+		(bottles.override {
+			bottlesExtraLibraries = pkgs: with pkgs; [ vulkan-loader openxr-loader ];
+		})
+		cambalache
+		#nixos-helper
+		twitz
+
+		#% unsorted
+		chromium
+		contrast
+		electron
+		electron_15
+		fractal
+		#gnome.gnome-boxes
+		keybase
+		kitty
+		kooha
+		tangram
+		ventoy-bin
 	];
 	fonts.fonts = [
 		meslo-lgs-nf # Meslo Nerd Font patched for Powerlevel10k
+		iosevka
 	];
 }

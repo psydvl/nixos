@@ -4,7 +4,7 @@
 		#nixos-unstable-small.url = "github:NixOS/nixpkgs/nixos-unstable-small";
 		#master.url = "github:NixOS/nixpkgs/master";
 		#nixos-2111.url = "github:NixOS/nixpkgs/nixos-21.11";
-		nixpkgs.url = "github:NixOS/nixpkgs";
+		#nixpkgs.url = "github:NixOS/nixpkgs";
 		#bisect.url = "github:NixOS/nixpkgs/";
 
 		#nur.url = "github:nix-community/NUR";
@@ -35,6 +35,7 @@
 									(import "${inputs.psydvl}/overlay.nix")
 									#inputs.nur.overlay
 								];
+								nix.registry.np.flake = nixospkgs;
 							}
 						)
 						./configuration.nix

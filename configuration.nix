@@ -6,19 +6,6 @@ let
 	packages = import ./packages.nix {
 		inherit pkgs;
 	};
-
-	environment.sessionVariables = {
-		XDG_CACHE_HOME	= "\${HOME}/.cache";
-		XDG_CONFIG_HOME	= "\${HOME}/.config";
-		XDG_BIN_HOME	= "\${HOME}/.local/bin";
-		XDG_DATA_HOME	= "\${HOME}/.local/share";
-		QT_QPA_PLATFORM	= "wayland";
-		SDL_VIDEODRIVER	= "wayland";
-
-		PATH = [
-			"\${XDG_BIN_HOME}"
-		];
-	};
 in {
 	nix = {
 		#autoOptimiseStore = true;
@@ -31,14 +18,13 @@ in {
 		package = packages.nix;
 		extraOptions = ''
 			experimental-features = nix-command flakes
-			keep-outputs = true
-			keep-derivations = true
 		'';
 	};
 
 	imports = [
 		./hardware-configuration.nix # Include the results of the hardware scan.
 		./extra-hardware-configuration.nix
+		./specialisation.nix
 	];
 
 	fileSystems."/home" = {
@@ -66,6 +52,7 @@ in {
 			};
 		};
 		kernelPackages = packages.linux;
+		kernelParams = [ "threadirq" ];
 		supportedFilesystems = [ "ntfs" ];
 	};
 
@@ -92,8 +79,8 @@ in {
 	i18n = {
 		defaultLocale = "en_US.UTF-8";
 		supportedLocales = [
-			"ru_RU.UTF-8/UTF-8"
 			"en_US.UTF-8/UTF-8"
+			"ru_RU.UTF-8/UTF-8"
 		];
 	};
 	console = {
@@ -104,10 +91,10 @@ in {
 	systemd.services.NetworkManager-wait-online.enable = false;
 
 	services = {
-		ananicy.enable = true;
+		accounts-daemon.enable = true;
 		fwupd.enable = true;
 		flatpak.enable = true;
-		accounts-daemon.enable = true;
+		sysprof.enable = true;
 
 		# Enable the X11 windowing system.
 		xserver.enable = true;
@@ -156,55 +143,114 @@ in {
 		alsa.enable = true;
 		alsa.support32Bit = true;
 		pulse.enable = true;
-		# If you want to use JACK applications, uncomment this
 		jack.enable = true;
+		wireplumber.enable = true;
+		media-session.enable = false;
 
-		# use the example session manager (no others are packaged yet so this is enabled by default,
-		# no need to redefine it in your config for now)
-		#media-session.enable = true;
-
-		media-session.config.bluez-monitor.rules = [
-			{
-				# Matches all cards
-				matches = [ { "device.name" = "~bluez_card.*"; } ];
-				actions = {
-					"update-props" = {
-						"bluez5.reconnect-profiles" = [ "hfp_hf" "hsp_hs" "a2dp_sink" ];
-						# mSBC is not expected to work on all headset + adapter combinations.
-						"bluez5.msbc-support" = true;
-						# SBC-XQ is not expected to work on all headset + adapter combinations.
-						"bluez5.sbc-xq-support" = true;
+		#media-session.config.bluez-monitor.rules = [
+		#	{
+		#		# Matches all cards
+		#		matches = [ { "device.name" = "~bluez_card.*"; } ];
+		#		actions = {
+		#			"update-props" = {
+		#				"bluez5.reconnect-profiles" = [ "hfp_hf" "hsp_hs" "a2dp_sink" ];
+		#				# mSBC is not expected to work on all headset + adapter combinations.
+		#				"bluez5.msbc-support" = true;
+		#				# SBC-XQ is not expected to work on all headset + adapter combinations.
+		#				"bluez5.sbc-xq-support" = true;
+		#			};
+		#		};
+		#	}
+		#	{
+		#		matches = [
+		#			# Matches all sources
+		#			{ "node.name" = "~bluez_input.*"; }
+		#			# Matches all outputs
+		#			{ "node.name" = "~bluez_output.*"; }
+		#		];
+		#		actions = {
+		#			"node.pause-on-idle" = false;
+		#		};
+		#	}
+		#];
+		config.pipewire = {
+			"context.properties" = {
+				#"link.max-buffers" = 64;
+				"link.max-buffers" = 16; # version < 3 clients can't handle more than this
+				"log.level" = 2; # https://docs.pipewire.org/page_daemon.html
+				#"default.clock.rate" = 48000;
+				#"default.clock.quantum" = 1024;
+				#"default.clock.min-quantum" = 32;
+				#"default.clock.max-quantum" = 8192;
+ 			};
+ 		};
+		config.pipewire-pulse = {
+			"context.properties" = {
+				"log.level" = 2;
+			};
+			"context.modules" = [
+				{
+					name = "libpipewire-module-rtkit";
+					args = {
+						"nice.level" = -15;
+						"rt.prio" = 88;
+						"rt.time.soft" = 200000;
+						"rt.time.hard" = 200000;
 					};
-				};
-			}
-			{
-				matches = [
-					# Matches all sources
-					{ "node.name" = "~bluez_input.*"; }
-					# Matches all outputs
-					{ "node.name" = "~bluez_output.*"; }
-				];
-				actions = {
-					"node.pause-on-idle" = false;
-				};
-			}
-		];
+					flags = [ "ifexists" "nofail" ];
+				}
+				{ name = "libpipewire-module-protocol-native"; }
+				{ name = "libpipewire-module-client-node"; }
+				{ name = "libpipewire-module-adapter"; }
+				{ name = "libpipewire-module-metadata"; }
+				{
+					name = "libpipewire-module-protocol-pulse";
+					args = {
+						"pulse.min.req" = "32/48000";
+						"pulse.default.req" = "32/48000";
+						"pulse.max.req" = "32/48000";
+						"pulse.min.quantum" = "32/48000";
+						"pulse.max.quantum" = "32/48000";
+						"server.address" = [ "unix:native" ];
+					};
+				}
+			];
+			"stream.properties" = {
+				"node.latency" = "32/48000";
+				"resample.quality" = 1;
+			};
+		};
 	};
 
 	# Enable touchpad support (enabled default in most desktopManager).
 	# services.xserver.libinput.enable = true;
 
+	environment= {
+		gnome.excludePackages = [ pkgs.orca ];
+		sessionVariables = {
+			XDG_CACHE_HOME		= "\${HOME}/.cache";
+			XDG_CONFIG_HOME		= "\${HOME}/.config";
+			XDG_BIN_HOME		= "\${HOME}/.local/bin";
+			XDG_DATA_HOME		= "\${HOME}/.local/share";
+			QT_QPA_PLATFORM		= "wayland";
+			SDL_VIDEODRIVER		= "wayland";
+			LIBVA_DRIVER_NAME 	= "iHD";
 
-	environment.systemPackages = with pkgs; [
-	] ++ packages.environment.systemPackages;
-	environment.pathsToLink = [
-		"/share/nix-direnv"
-	];
+			PATH = [
+				"\${XDG_BIN_HOME}"
+			];
+		};
+		systemPackages = with pkgs; [
+		] ++ packages.environment.systemPackages;
+		pathsToLink = [
+			"/share/nix-direnv"
+		];
 	fonts.fonts = with pkgs; [] ++ packages.fonts.fonts;
 
 	programs = {
 		adb.enable = true;
 		dconf.enable = true;
+		gamemode.enable = true;
 		steam.enable = true;
 		vim.defaultEditor = true;
 		xwayland.enable = true;

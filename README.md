@@ -1,3 +1,5 @@
+# Deprecated because I've moved to openSUSE Tumbleweed
+---
 # NixOS Configuration
 
 ## [@psydvl](https://github.com/psydvl) NixOS Configuration
